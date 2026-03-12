@@ -4,5 +4,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TrappedMindSharp.Tests/TrappedMindSharp.Tests.csproj" />
+    <Project Path="tests/TrappedMindSharp.Integration.Tests/TrappedMindSharp.Integration.Tests.csproj" />
   </Folder>
 </Solution>
