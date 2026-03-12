@@ -1,4 +1,6 @@
+using System.Text;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace TrappedMindSharp;
 
@@ -18,18 +20,39 @@ public static class ConsoleRenderer
         return Console.ReadLine();
     }
 
+    public static void RenderUserMessage(string message)
+    {
+        var panel = new Panel(Markup.Escape(message))
+            .Header("[bold cyan]you[/]")
+            .BorderColor(Color.Cyan)
+            .Expand();
+        AnsiConsole.Write(panel);
+    }
+
     public static async Task RenderStreamingResponseAsync(IAsyncEnumerable<string> tokens, CancellationToken ct = default)
     {
-        AnsiConsole.Markup("[bold green]ai>[/] ");
+        var buffer = new StringBuilder();
 
-        await foreach (var token in tokens.WithCancellation(ct))
-        {
-            // Write raw text (no markup interpretation) to avoid issues with special chars
-            AnsiConsole.Write(token);
-        }
+        await AnsiConsole.Live(BuildAssistantPanel(""))
+            .AutoClear(false)
+            .StartAsync(async ctx =>
+            {
+                await foreach (var token in tokens.WithCancellation(ct))
+                {
+                    buffer.Append(token);
+                    ctx.UpdateTarget(BuildAssistantPanel(buffer.ToString()));
+                    ctx.Refresh();
+                }
+            });
+    }
 
-        AnsiConsole.WriteLine();
-        AnsiConsole.Write(new Rule().RuleStyle("dim"));
+    private static IRenderable BuildAssistantPanel(string content)
+    {
+        var text = string.IsNullOrEmpty(content) ? " " : Markup.Escape(content);
+        return new Panel(text)
+            .Header("[bold green]ai[/]")
+            .BorderColor(Color.Green)
+            .Expand();
     }
 
     public static void RenderInfo(string markup)

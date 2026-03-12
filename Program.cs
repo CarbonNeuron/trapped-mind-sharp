@@ -1,5 +1,9 @@
+using System.Text;
 using Microsoft.Extensions.AI;
 using TrappedMindSharp;
+
+Console.InputEncoding = Encoding.UTF8;
+Console.OutputEncoding = Encoding.UTF8;
 
 const string DefaultModel = "qwen2.5:3b";
 const string DefaultEndpoint = "http://localhost:11434";
@@ -32,6 +36,8 @@ while (!cts.Token.IsCancellationRequested)
 
     if (string.IsNullOrWhiteSpace(input))
         continue;
+
+    ConsoleRenderer.RenderUserMessage(input);
 
     var result = CommandHandler.TryHandle(
         input, chat,
