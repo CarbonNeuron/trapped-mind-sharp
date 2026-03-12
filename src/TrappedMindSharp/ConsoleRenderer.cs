@@ -16,7 +16,7 @@ public static class ConsoleRenderer
 
     public static string? ReadInput()
     {
-        AnsiConsole.Markup("[bold cyan]you>[/] ");
+        AnsiConsole.Markup("[bold cyan]>[/] ");
         return Console.ReadLine();
     }
 
