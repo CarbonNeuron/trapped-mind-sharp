@@ -15,4 +15,8 @@
     <PackageReference Include="MDView.Renderer" Version="0.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TrappedMindSharp\TrappedMindSharp.csproj" />
+  </ItemGroup>
+
 </Project>
