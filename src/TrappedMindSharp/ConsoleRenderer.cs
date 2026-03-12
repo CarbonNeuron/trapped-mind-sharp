@@ -48,8 +48,8 @@ public static class ConsoleRenderer
 
     private static IRenderable BuildAssistantPanel(string content)
     {
-        var text = string.IsNullOrEmpty(content) ? " " : Markup.Escape(content);
-        return new Panel(text)
+        var rendered = MDView.MarkdownRenderer.Render(content);
+        return new Panel(rendered)
             .Header("[bold green]ai[/]")
             .BorderColor(Color.Green)
             .Expand();
