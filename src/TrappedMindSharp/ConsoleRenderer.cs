@@ -59,6 +59,34 @@ public static class ConsoleRenderer
             .Expand();
     }
 
+    public static IRenderable BuildToolCallPanel(string toolName, string arguments)
+    {
+        var content = $"[bold]{Markup.Escape(toolName)}[/]\n[dim]{Markup.Escape(arguments)}[/]";
+        return new Panel(new Markup(content))
+            .Header("[bold yellow]tool call[/]")
+            .BorderColor(Color.Yellow)
+            .Expand();
+    }
+
+    public static IRenderable BuildToolResultPanel(string toolName, string result)
+    {
+        var text = string.IsNullOrEmpty(result) ? "[dim](no output)[/]" : Markup.Escape(result);
+        return new Panel(new Markup(text))
+            .Header($"[dim]{Markup.Escape(toolName)} result[/]")
+            .BorderColor(Color.Grey)
+            .Expand();
+    }
+
+    public static void RenderToolCall(string toolName, string arguments)
+    {
+        AnsiConsole.Write(BuildToolCallPanel(toolName, arguments));
+    }
+
+    public static void RenderToolResult(string toolName, string result)
+    {
+        AnsiConsole.Write(BuildToolResultPanel(toolName, result));
+    }
+
     public static void RenderInfo(string markup)
     {
         AnsiConsole.MarkupLine(markup);
