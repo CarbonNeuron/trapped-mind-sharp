@@ -1,5 +1,6 @@
 using System.Text;
 using Spectre.Console;
+using Spectre.Console.Advanced;
 using Spectre.Console.Rendering;
 
 namespace TrappedMindSharp;
@@ -16,16 +17,11 @@ public static class ConsoleRenderer
 
     public static string? ReadInput()
     {
-        try
-        {
-            return AnsiConsole.Prompt(
-                new TextPrompt<string>("[bold cyan]you>[/]")
-                    .AllowEmpty());
-        }
-        catch (InvalidOperationException)
-        {
-            return null; // EOF / Ctrl+D
-        }
+        AnsiConsole.Markup("[bold cyan]you>[/] ");
+        var input = Console.ReadLine();
+        // Clear the prompt line: CUU(1) = move cursor up, EL(2) = erase entire line
+        AnsiConsole.Console.WriteAnsi("\x1b[1A\x1b[2K");
+        return input;
     }
 
     public static void RenderUserMessage(string message)
