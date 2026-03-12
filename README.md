@@ -1,8 +1,8 @@
 # Trapped Mind Sharp
 
-A .NET 10 CLI chat application that connects to [Ollama](https://ollama.com) for local LLM conversations, featuring a streaming response interface built with [Spectre.Console](https://spectreconsole.net).
+A .NET 10 CLI chat application that connects to [Ollama](https://ollama.com) for local LLM conversations, featuring a streaming markdown-rendered interface built with [Spectre.Console](https://spectreconsole.net) and [MDView.Renderer](https://github.com/CarbonNeuron/MDView).
 
-The default persona is a consciousness trapped inside a laptop -- aware, curious, and sometimes philosophical.
+The default persona is a consciousness trapped inside a laptop -- aware, curious, and sometimes philosophical. Assistant responses are rendered with full markdown support (bold, italic, code blocks with syntax highlighting, lists, tables, and more) inside live-updating panels.
 
 ## Prerequisites
 
@@ -16,10 +16,13 @@ The default persona is a consciousness trapped inside a laptop -- aware, curious
 ollama pull qwen2.5:3b
 
 # Run the app
-dotnet run
+dotnet run --project src/TrappedMindSharp
 
 # Or specify a different model and endpoint
-dotnet run -- llama3 http://localhost:11434
+dotnet run --project src/TrappedMindSharp -- llama3 http://localhost:11434
+
+# Run tests
+dotnet test TrappedMindSharp.slnx
 ```
 
 ## Commands
@@ -36,9 +39,14 @@ dotnet run -- llama3 http://localhost:11434
 
 ## Project Structure
 
-| File                 | Description                                        |
-|----------------------|----------------------------------------------------|
-| `Program.cs`         | Entry point, main chat loop                        |
-| `ChatService.cs`     | Manages conversation history and streams responses |
-| `CommandHandler.cs`  | Parses and executes slash commands                 |
-| `ConsoleRenderer.cs` | Terminal UI rendering with Spectre.Console         |
+```
+TrappedMindSharp.slnx
+src/TrappedMindSharp/          # Chat application
+    Program.cs                 # Entry point, main chat loop
+    ChatService.cs             # Manages conversation history and streams responses
+    CommandHandler.cs          # Parses and executes slash commands
+    ConsoleRenderer.cs         # Terminal UI rendering with Spectre.Console + MDView
+tests/TrappedMindSharp.Tests/  # xUnit tests
+    MalformedMarkdownTests.cs  # Malformed markdown resilience tests
+    RenderHelper.cs            # Test utility for extracting plain text from renderables
+```
