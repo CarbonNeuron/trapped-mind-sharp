@@ -59,22 +59,22 @@ public class ChatService
         return null;
     }
 
-    public async IAsyncEnumerable<string> StreamResponseAsync(
+    public async IAsyncEnumerable<ChatResponseUpdate> StreamResponseAsync(
         IChatClient client,
+        ChatOptions? options = null,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        var fullResponse = new System.Text.StringBuilder();
+        var updates = new List<ChatResponseUpdate>();
 
-        await foreach (var update in client.GetStreamingResponseAsync(_history, cancellationToken: ct))
+        await foreach (var update in client.GetStreamingResponseAsync(_history, options, ct))
         {
-            var text = update.Text;
-            if (text is not null)
-            {
-                fullResponse.Append(text);
-                yield return text;
-            }
+            updates.Add(update);
+            yield return update;
         }
 
-        _history.Add(new ChatMessage(ChatRole.Assistant, fullResponse.ToString()));
+        // Build the response and add all messages to history
+        var response = updates.ToChatResponse();
+        foreach (var message in response.Messages)
+            _history.Add(message);
     }
 }
