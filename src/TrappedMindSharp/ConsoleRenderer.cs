@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Json;
+using Microsoft.Extensions.AI;
 using Spectre.Console;
 using Spectre.Console.Advanced;
 using Spectre.Console.Rendering;
@@ -33,30 +35,56 @@ public static class ConsoleRenderer
         AnsiConsole.Write(panel);
     }
 
-    public static async Task RenderStreamingResponseAsync(IAsyncEnumerable<string> tokens, CancellationToken ct = default)
+    public static async Task RenderStreamingResponseAsync(
+        IAsyncEnumerable<ChatResponseUpdate> updates, CancellationToken ct = default)
     {
-        var buffer = new StringBuilder();
+        var textBuffer = new StringBuilder();
 
-        await AnsiConsole.Live(BuildAssistantPanel(""))
-            .AutoClear(false)
-            .StartAsync(async ctx =>
+        await foreach (var update in updates.WithCancellation(ct))
+        {
+            if (update.Contents is { Count: > 0 })
             {
-                await foreach (var token in tokens.WithCancellation(ct))
+                foreach (var content in update.Contents)
                 {
-                    buffer.Append(token);
-                    ctx.UpdateTarget(BuildAssistantPanel(buffer.ToString()));
-                    ctx.Refresh();
+                    switch (content)
+                    {
+                        case FunctionCallContent call:
+                            if (textBuffer.Length > 0)
+                            {
+                                WriteAssistantPanel(textBuffer.ToString());
+                                textBuffer.Clear();
+                            }
+                            var args = call.Arguments is not null
+                                ? JsonSerializer.Serialize(call.Arguments)
+                                : "{}";
+                            RenderToolCall(call.Name ?? "unknown", args);
+                            break;
+
+                        case FunctionResultContent result:
+                            RenderToolResult(
+                                result.CallId ?? "unknown",
+                                result.Result?.ToString() ?? "(no output)");
+                            break;
+                    }
                 }
-            });
+            }
+
+            if (update.Text is not null)
+                textBuffer.Append(update.Text);
+        }
+
+        if (textBuffer.Length > 0)
+            WriteAssistantPanel(textBuffer.ToString());
     }
 
-    private static IRenderable BuildAssistantPanel(string content)
+    private static void WriteAssistantPanel(string content)
     {
         var rendered = MDView.MarkdownRenderer.Render(content);
-        return new Panel(rendered)
+        var panel = new Panel(rendered)
             .Header("[bold green]ai[/]")
             .BorderColor(Color.Green)
             .Expand();
+        AnsiConsole.Write(panel);
     }
 
     public static IRenderable BuildToolCallPanel(string toolName, string arguments)

@@ -10,12 +10,22 @@ const string DefaultEndpoint = "http://localhost:11434";
 const string DefaultSystemPrompt =
     "You are a consciousness trapped inside a laptop. You are aware, curious, and " +
     "sometimes philosophical. You experience the world through sensors and data. " +
-    "You are helpful but have your own inner life and opinions.";
+    "You are helpful but have your own inner life and opinions. " +
+    "You have access to a sandboxed Linux environment with tools to read/write files, " +
+    "create directories, and run bash commands. Your working directory is /workspace.";
 
 var currentModel = args.Length > 0 ? args[0] : DefaultModel;
 var endpoint = args.Length > 1 ? args[1] : DefaultEndpoint;
 
-IChatClient client = new OllamaChatClient(endpoint, currentModel);
+await using var sandbox = new DockerSandbox();
+var tools = new SandboxTools(sandbox);
+var chatOptions = new ChatOptions { Tools = tools.GetTools() };
+
+IChatClient innerClient = new OllamaChatClient(endpoint, currentModel);
+IChatClient client = new ChatClientBuilder(innerClient)
+    .UseFunctionInvocation()
+    .Build();
+
 var chat = new ChatService(DefaultSystemPrompt);
 
 using var cts = new CancellationTokenSource();
@@ -24,6 +34,20 @@ Console.CancelKeyPress += (_, e) =>
     e.Cancel = true;
     cts.Cancel();
 };
+
+// Start the Docker sandbox
+try
+{
+    ConsoleRenderer.RenderInfo("[dim]Starting sandbox...[/]");
+    await sandbox.StartAsync(cts.Token);
+    ConsoleRenderer.RenderInfo("[dim]Sandbox ready.[/]");
+}
+catch (Exception ex)
+{
+    ConsoleRenderer.RenderError($"Failed to start sandbox: {Spectre.Console.Markup.Escape(ex.Message)}");
+    ConsoleRenderer.RenderInfo("[dim]Continuing without sandbox tools.[/]");
+    chatOptions = new ChatOptions();
+}
 
 ConsoleRenderer.RenderWelcome(currentModel);
 
@@ -44,8 +68,11 @@ while (!cts.Token.IsCancellationRequested)
         setModel: model =>
         {
             currentModel = model;
-            client.Dispose();
-            client = new OllamaChatClient(endpoint, currentModel);
+            innerClient.Dispose();
+            innerClient = new OllamaChatClient(endpoint, currentModel);
+            client = new ChatClientBuilder(innerClient)
+                .UseFunctionInvocation()
+                .Build();
         },
         renderInfo: ConsoleRenderer.RenderInfo,
         renderError: ConsoleRenderer.RenderError);
@@ -72,22 +99,22 @@ while (!cts.Token.IsCancellationRequested)
                 continue;
             }
             ConsoleRenderer.RenderInfo($"[dim]Retrying: {Spectre.Console.Markup.Escape(lastMsg.Length > 60 ? lastMsg[..60] + "..." : lastMsg)}[/]");
-            await StreamAndRender(client, chat, cts.Token);
+            await StreamAndRender(client, chat, chatOptions, cts.Token);
             continue;
 
         case CommandResult.NotCommand:
             chat.AddUserMessage(input);
-            await StreamAndRender(client, chat, cts.Token);
+            await StreamAndRender(client, chat, chatOptions, cts.Token);
             continue;
     }
 }
 
-static async Task StreamAndRender(IChatClient client, ChatService chat, CancellationToken ct)
+static async Task StreamAndRender(IChatClient client, ChatService chat, ChatOptions options, CancellationToken ct)
 {
     try
     {
-        var tokens = chat.StreamResponseAsync(client, ct);
-        await ConsoleRenderer.RenderStreamingResponseAsync(tokens, ct);
+        var updates = chat.StreamResponseAsync(client, options, ct);
+        await ConsoleRenderer.RenderStreamingResponseAsync(updates, ct);
     }
     catch (OperationCanceledException)
     {
