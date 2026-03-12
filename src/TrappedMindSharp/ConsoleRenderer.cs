@@ -16,13 +16,16 @@ public static class ConsoleRenderer
 
     public static string? ReadInput()
     {
-        AnsiConsole.Markup("[bold cyan]you>[/] ");
-        var input = Console.ReadLine();
-        // Clear the prompt line so the panel replaces it
-        Console.SetCursorPosition(0, Console.CursorTop - 1);
-        Console.Write(new string(' ', Console.WindowWidth));
-        Console.SetCursorPosition(0, Console.CursorTop);
-        return input;
+        try
+        {
+            return AnsiConsole.Prompt(
+                new TextPrompt<string>("[bold cyan]you>[/]")
+                    .AllowEmpty());
+        }
+        catch (InvalidOperationException)
+        {
+            return null; // EOF / Ctrl+D
+        }
     }
 
     public static void RenderUserMessage(string message)
